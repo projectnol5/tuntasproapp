@@ -5,7 +5,6 @@ import {
   formatDate,
   formatTime,
   formatCoords,
-  generateReportCode,
   formatDateForFilename,
 } from './format';
 
@@ -30,7 +29,7 @@ const MEETING_SUB_LABELS: Record<string, string> = {
 
 export function generateFileName(report: ReportData): string {
   const date = formatDateForFilename(report.reportDate);
-  const code = report.reportCode || generateReportCode(report.reportDate);
+  const code = report.reportCode || 'TP';
   return `Tuntas_Pro_${code}_${date}`;
 }
 
@@ -54,7 +53,7 @@ function addHeader(doc: jsPDF, report: ReportData, code: string): number {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(100);
-  doc.text(`Kode: ${code}`, MARGIN, 28);
+  doc.text(`No. Laporan: ${code}`, MARGIN, 28);
   doc.text(`Tanggal: ${formatDate(report.reportDate)}`, MARGIN, 33);
 
   // Line separator
@@ -203,6 +202,43 @@ function addItemsTable(doc: jsPDF, report: ReportData, startY: number): number {
   return y + 8;
 }
 
+function addSignatureBlock(doc: jsPDF, report: ReportData, startY: number): number {
+  let y = startY;
+  if (y > PAGE_H - 60) {
+    doc.addPage();
+    y = MARGIN;
+  }
+
+  const colW = CONTENT_W / 2;
+  const boxH = 42;
+
+  doc.setDrawColor(200);
+  doc.setLineWidth(0.3);
+  doc.rect(MARGIN, y, colW - 3, boxH);
+  doc.rect(MARGIN + colW + 3, y, colW - 3, boxH);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(80);
+  doc.text('Dibuat oleh,', MARGIN + colW / 2 - 3, y + 6, { align: 'center' });
+  doc.text('Disetujui oleh,', MARGIN + colW * 1.5 + 3, y + 6, { align: 'center' });
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(0);
+  doc.text(report.createdBy.name || '-', MARGIN + colW / 2 - 3, y + 30, { align: 'center' });
+  doc.text(report.approvedBy.name || '-', MARGIN + colW * 1.5 + 3, y + 30, { align: 'center' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(80);
+  doc.text(report.createdBy.position || '-', MARGIN + colW / 2 - 3, y + 35, { align: 'center' });
+  doc.text(report.approvedBy.position || '-', MARGIN + colW * 1.5 + 3, y + 35, { align: 'center' });
+  doc.setTextColor(0);
+
+  return y + boxH;
+}
+
 async function addPhotoGrid(
   doc: jsPDF,
   photos: PhotoData[],
@@ -286,10 +322,11 @@ async function addPhotoGrid(
 
 export async function exportPDF(report: ReportData): Promise<void> {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-  const code = report.reportCode || generateReportCode(report.reportDate);
+  const code = report.reportCode || 'TP-XXXX-000';
 
   let y = addHeader(doc, report, code);
   y = addItemsTable(doc, report, y);
+  addSignatureBlock(doc, report, y);
 
   // Collect ALL photos into a single array
   const allPhotos: PhotoData[] = [];

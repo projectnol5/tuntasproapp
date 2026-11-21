@@ -73,5 +73,6 @@ export interface ReportData {
   createdAt: string;
   updatedAt: string;
   submittedAt?: string;
+  reportNumber?: number;
   reportCode?: string;
 }

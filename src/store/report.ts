@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { supabase } from '../lib/supabase';
 import type {
   ActivityType,
   MeetingSubType,
@@ -107,11 +108,12 @@ interface ReportStore {
 
   loadDraft: () => void;
   startFresh: () => void;
-  submitReport: () => void;
+  submitReport: () => Promise<void>;
   resetReport: () => void;
+  loadSubmittedReports: () => Promise<void>;
 
   submittedReports: ReportData[];
-  deleteSubmittedReport: (code: string) => void;
+  deleteSubmittedReport: (code: string) => Promise<void>;
 }
 
 function updateTimestamp(report: ReportData): ReportData {
@@ -366,12 +368,21 @@ export const useReportStore = create<ReportStore>()(
 
       submittedReports: [],
 
-      submitReport: () => {
-        const code = get().report.reportCode || generateReportCode(get().report.reportDate);
+      submitReport: async () => {
+        const { data, error } = await supabase.rpc('submit_report', {
+          p_data: get().report,
+        });
+        if (error) throw error;
+
+        const row = Array.isArray(data) ? data[0] : data;
+        const reportNumber: number = (row as { report_number: number }).report_number;
+        const reportCode: string = (row as { report_code: string }).report_code;
+
         const submitted = updateTimestamp({
           ...get().report,
+          reportNumber,
+          reportCode,
           submittedAt: new Date().toISOString(),
-          reportCode: code,
         });
         set((s) => ({
           report: submitted,
@@ -379,14 +390,39 @@ export const useReportStore = create<ReportStore>()(
         }));
       },
 
+      loadSubmittedReports: async () => {
+        const { data, error } = await supabase
+          .from('reports')
+          .select('data, report_code, report_number, submitted_at')
+          .order('submitted_at', { ascending: false });
+        if (error) throw error;
+
+        const rows = (data || []) as {
+          data: ReportData;
+          report_code: string;
+          report_number: number;
+          submitted_at: string;
+        }[];
+        const reports = rows.map((row) => ({
+          ...row.data,
+          reportCode: row.report_code,
+          reportNumber: row.report_number,
+          submittedAt: row.submitted_at,
+        }));
+        set({ submittedReports: reports });
+      },
+
+      deleteSubmittedReport: async (code: string) => {
+        const { error } = await supabase.from('reports').delete().eq('report_code', code);
+        if (error) throw error;
+        set((s) => ({
+          submittedReports: s.submittedReports.filter((r) => r.reportCode !== code),
+        }));
+      },
+
       resetReport: () => {
         set({ report: createEmptyReport(), currentStep: 0, hasDraft: false, startedFromDraft: false });
       },
-
-      deleteSubmittedReport: (code) =>
-        set((s) => ({
-          submittedReports: s.submittedReports.filter((r) => r.reportCode !== code),
-        })),
     }),
     {
       name: STORAGE_KEY,

@@ -12,14 +12,16 @@ import {
   Receipt,
   Camera,
   Calendar,
+  PenLine,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useReportStore } from '../../store/report';
 import {
   formatIDR,
   formatDate,
   formatDateTime,
-  generateReportCode,
 } from '../../lib/format';
 import type { ReportData } from '../../lib/types';
 import { cn } from '../../lib/utils';
@@ -47,6 +49,8 @@ interface StepSummaryProps {
 export function StepSummary({ incompleteItems, onJump }: StepSummaryProps) {
   const { report, submitReport, resetReport } = useReportStore();
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
@@ -57,7 +61,7 @@ export function StepSummary({ incompleteItems, onJump }: StepSummaryProps) {
   const itemTotal = report.items.reduce((sum, it) => sum + it.qty * it.price, 0);
   const diff = report.receipt.receiptTotal - itemTotal;
   const isMatch = diff === 0;
-  const code = report.reportCode || generateReportCode(report.reportDate);
+  const code = report.reportCode || 'TP-XXXX-000';
 
   const activityLabel = (() => {
     if (!report.activityType) return '-';
@@ -81,9 +85,23 @@ export function StepSummary({ incompleteItems, onJump }: StepSummaryProps) {
     }
   };
 
-  const handleSubmit = () => {
-    submitReport();
-    setSubmitted(true);
+  const handleSubmit = async () => {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await submitReport();
+      setSubmitted(true);
+      try {
+        const { exportPDF } = await import('../../lib/pdf');
+        await exportPDF(useReportStore.getState().report);
+      } catch {
+        // PDF download failed but the report is saved; user can retry from success screen
+      }
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Gagal menyimpan laporan. Coba lagi.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const photoCount = report.stores.reduce(
@@ -130,7 +148,7 @@ export function StepSummary({ incompleteItems, onJump }: StepSummaryProps) {
         {/* Header */}
         <div className="text-center mb-4">
           <h3 className="text-lg font-bold text-foreground tracking-tight">Tuntas Pro</h3>
-          <p className="font-mono-num text-xs text-muted-foreground">Kode: {code}</p>
+          <p className="font-mono-num text-xs text-muted-foreground">No. Laporan: {code}</p>
           <div className="h-px gradient-line my-3 mx-8" />
         </div>
 
@@ -221,6 +239,30 @@ export function StepSummary({ incompleteItems, onJump }: StepSummaryProps) {
         </div>
       </div>
 
+      {/* Signature preview */}
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-soft">
+        <div className="flex items-center gap-2 mb-4">
+          <PenLine className="h-4 w-4 text-primary" strokeWidth={1.75} />
+          <h3 className="text-sm font-semibold text-foreground">Tanda Tangan</h3>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="text-center">
+            <div className="h-16 border-b border-dashed border-border mb-2" />
+            <p className="text-sm font-semibold text-foreground truncate">
+              {report.createdBy.name || 'Dibuat oleh'}
+            </p>
+            <p className="text-xs text-muted-foreground truncate">{report.createdBy.position || 'Dibuat oleh'}</p>
+          </div>
+          <div className="text-center">
+            <div className="h-16 border-b border-dashed border-border mb-2" />
+            <p className="text-sm font-semibold text-foreground truncate">
+              {report.approvedBy.name || 'Disetujui oleh'}
+            </p>
+            <p className="text-xs text-muted-foreground truncate">{report.approvedBy.position || 'Disetujui oleh'}</p>
+          </div>
+        </div>
+      </div>
+
       {/* Preview card */}
       <button
         type="button"
@@ -248,22 +290,42 @@ export function StepSummary({ incompleteItems, onJump }: StepSummaryProps) {
         {downloading ? 'Memproses…' : 'Download PDF'}
       </button>
 
+      {/* Save error */}
+      {saveError && (
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 flex items-start gap-2">
+          <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" strokeWidth={1.75} />
+          <div className="text-sm">
+            <p className="font-semibold text-destructive">Gagal menyimpan</p>
+            <p className="text-destructive/80">{saveError}</p>
+          </div>
+        </div>
+      )}
+
       {/* Submit */}
       <button
         type="button"
         onClick={handleSubmit}
-        disabled={incompleteItems.length > 0}
+        disabled={saving || incompleteItems.length > 0}
         className={cn(
           'w-full h-14 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all active:scale-[0.98]',
-          incompleteItems.length > 0
+          saving || incompleteItems.length > 0
             ? 'bg-muted text-muted-foreground cursor-not-allowed'
             : 'bg-success text-success-foreground hover:bg-success/90 shadow-soft',
         )}
       >
-        <Check className="h-5 w-5" strokeWidth={1.75} />
-        {incompleteItems.length > 0
-          ? `Lengkapi ${incompleteItems.length} item lagi`
-          : 'Simpan Laporan'}
+        {saving ? (
+          <>
+            <Loader2 className="h-5 w-5 animate-spin" strokeWidth={1.75} />
+            Menyimpan…
+          </>
+        ) : (
+          <>
+            <Check className="h-5 w-5" strokeWidth={1.75} />
+            {incompleteItems.length > 0
+              ? `Lengkapi ${incompleteItems.length} item lagi`
+              : 'Simpan Laporan'}
+          </>
+        )}
       </button>
 
       {/* Preview overlay */}
@@ -305,7 +367,7 @@ function PreviewOverlay({
   report: ReportData;
   onClose: () => void;
 }) {
-  const code = report.reportCode || generateReportCode(report.reportDate);
+  const code = report.reportCode || 'TP-XXXX-000';
   const itemTotal = report.items.reduce((sum, it) => sum + it.qty * it.price, 0);
   const diff = report.receipt.receiptTotal - itemTotal;
   const isMatch = diff === 0;
@@ -342,7 +404,7 @@ function PreviewOverlay({
           {/* Report header */}
           <div className="text-center pb-3 border-b border-border">
             <h4 className="text-lg font-bold text-foreground">Tuntas Pro</h4>
-            <p className="font-mono-num text-xs text-muted-foreground">Kode: {code}</p>
+            <p className="font-mono-num text-xs text-muted-foreground">No. Laporan: {code}</p>
           </div>
 
           {/* Info sections */}
@@ -483,9 +545,15 @@ function SuccessScreen({
   report: ReportData;
   onReset: () => void;
 }) {
-  const { submittedReports, deleteSubmittedReport } = useReportStore();
+  const { submittedReports, deleteSubmittedReport, loadSubmittedReports } = useReportStore();
   const [downloading, setDownloading] = useState(false);
-  const code = report.reportCode || generateReportCode(report.reportDate);
+  const code = report.reportCode || 'TP-XXXX-000';
+
+  useEffect(() => {
+    loadSubmittedReports().catch(() => {
+      // keep the local list if the refresh fails
+    });
+  }, [loadSubmittedReports]);
 
   const handleDownloadPDF = async () => {
     setDownloading(true);
