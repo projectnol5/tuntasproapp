@@ -90,7 +90,9 @@ export function Wizard({ darkMode, onToggleDark }: WizardProps) {
       }
 
       if (stepId === 'handover') {
-        if (!report.handover.picName) errs.handoverPicName = 'Nama PIC wajib diisi';
+        if (report.activityType !== 'iuran' && !report.handover.picName) {
+          errs.handoverPicName = 'Nama PIC wajib diisi';
+        }
         if (report.handover.amount <= 0) errs.handoverAmount = 'Jumlah uang wajib diisi';
         if (!report.handover.recipient) errs.handoverRecipient = 'Nama penerima wajib diisi';
       }

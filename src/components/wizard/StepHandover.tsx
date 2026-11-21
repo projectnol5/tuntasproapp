@@ -1,4 +1,4 @@
-import { HandCoins, User, FileText, Camera } from 'lucide-react';
+import { HandCoins, User, FileText } from 'lucide-react';
 import { useReportStore } from '../../store/report';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
@@ -28,42 +28,46 @@ export function StepHandover({ errors }: StepHandoverProps) {
         <p className="text-sm text-muted-foreground mt-1">Isi data penyerahan iuran/koordinasi</p>
       </div>
 
-      {/* PIC selfie + name */}
-      <div className="rounded-2xl border border-border bg-card p-4 shadow-soft space-y-4">
-        <div className="flex items-center gap-2">
-          <User className="h-4 w-4 text-primary" strokeWidth={1.75} />
-          <h3 className="font-semibold text-sm">Data PIC (Yang Menyerahkan)</h3>
-        </div>
+      {report.activityType !== 'iuran' && (
+        <>
+          {/* PIC selfie + name */}
+          <div className="rounded-2xl border border-border bg-card p-4 shadow-soft space-y-4">
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-primary" strokeWidth={1.75} />
+              <h3 className="font-semibold text-sm">Data PIC (Yang Menyerahkan)</h3>
+            </div>
 
-        <div className="space-y-1.5">
-          <Label className="text-xs font-medium text-muted-foreground">Foto Selfie PIC</Label>
-          <SinglePhotoUploader
-            photo={handover.picPhoto}
-            label="PIC Penyerah"
-            onSet={setHandoverPicPhoto}
-            onRemove={removeHandoverPicPhoto}
-            buttonLabel="Ambil foto selfie PIC"
-          />
-        </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Foto Selfie PIC</Label>
+              <SinglePhotoUploader
+                photo={handover.picPhoto}
+                label="PIC Penyerah"
+                onSet={setHandoverPicPhoto}
+                onRemove={removeHandoverPicPhoto}
+                buttonLabel="Ambil foto selfie PIC"
+              />
+            </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="handover-pic" className="text-sm font-medium flex items-center gap-1.5">
-            <User className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />
-            Nama PIC
-          </Label>
-          <Input
-            id="handover-pic"
-            type="text"
-            placeholder="Nama penanggung jawab yang menyerahkan"
-            value={handover.picName}
-            onChange={(e) => setHandover({ picName: e.target.value })}
-            className="min-h-[44px] text-base"
-          />
-          {errors.handoverPicName && (
-            <p className="text-xs text-destructive" role="alert">{errors.handoverPicName}</p>
-          )}
-        </div>
-      </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="handover-pic" className="text-sm font-medium flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />
+                Nama PIC
+              </Label>
+              <Input
+                id="handover-pic"
+                type="text"
+                placeholder="Nama penanggung jawab yang menyerahkan"
+                value={handover.picName}
+                onChange={(e) => setHandover({ picName: e.target.value })}
+                className="min-h-[44px] text-base"
+              />
+              {errors.handoverPicName && (
+                <p className="text-xs text-destructive" role="alert">{errors.handoverPicName}</p>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Money photo */}
       <div className="rounded-2xl border border-border bg-card p-4 shadow-soft space-y-3">
