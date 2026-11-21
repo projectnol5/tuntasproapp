@@ -328,11 +328,13 @@ export async function exportPDF(report: ReportData): Promise<void> {
   y = addItemsTable(doc, report, y);
   addSignatureBlock(doc, report, y);
 
-  // Collect ALL photos into a single array
+  // Collect all report photos, excluding store and handover PIC photos for iuran
   const allPhotos: PhotoData[] = [];
-  for (const store of report.stores) {
-    if (store.picPhoto?.dataUrl) allPhotos.push({ ...store.picPhoto, label: 'PIC' });
-    if (store.storefrontPhoto?.dataUrl) allPhotos.push({ ...store.storefrontPhoto, label: 'Toko' });
+  if (report.activityType !== 'iuran') {
+    for (const store of report.stores) {
+      if (store.picPhoto?.dataUrl) allPhotos.push({ ...store.picPhoto, label: 'PIC' });
+      if (store.storefrontPhoto?.dataUrl) allPhotos.push({ ...store.storefrontPhoto, label: 'Toko' });
+    }
   }
   for (const photo of report.goodsPhotos) {
     if (photo.dataUrl) allPhotos.push(photo);
@@ -340,7 +342,7 @@ export async function exportPDF(report: ReportData): Promise<void> {
   for (const photo of report.receipt.photos) {
     if (photo.dataUrl) allPhotos.push(photo);
   }
-  if (report.handover.picPhoto?.dataUrl) {
+  if (report.activityType !== 'iuran' && report.handover.picPhoto?.dataUrl) {
     allPhotos.push({ ...report.handover.picPhoto, label: 'PIC Penyerah' });
   }
   if (report.handover.moneyPhoto?.dataUrl) {

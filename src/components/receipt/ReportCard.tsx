@@ -309,9 +309,11 @@ function PhotoWithCaption({
 
 function collectAllPhotos(report: ReportData): PhotoData[] {
   const photos: PhotoData[] = [];
-  for (const store of report.stores) {
-    if (store.picPhoto?.dataUrl) photos.push({ ...store.picPhoto, label: 'PIC' });
-    if (store.storefrontPhoto?.dataUrl) photos.push({ ...store.storefrontPhoto, label: 'Toko' });
+  if (report.activityType !== 'iuran') {
+    for (const store of report.stores) {
+      if (store.picPhoto?.dataUrl) photos.push({ ...store.picPhoto, label: 'PIC' });
+      if (store.storefrontPhoto?.dataUrl) photos.push({ ...store.storefrontPhoto, label: 'Toko' });
+    }
   }
   for (const photo of report.goodsPhotos) {
     if (photo.dataUrl) photos.push(photo);
@@ -319,7 +321,7 @@ function collectAllPhotos(report: ReportData): PhotoData[] {
   for (const photo of report.receipt.photos) {
     if (photo.dataUrl) photos.push(photo);
   }
-  if (report.handover.picPhoto?.dataUrl) {
+  if (report.activityType !== 'iuran' && report.handover.picPhoto?.dataUrl) {
     photos.push({ ...report.handover.picPhoto, label: 'PIC Penyerah' });
   }
   if (report.handover.moneyPhoto?.dataUrl) {

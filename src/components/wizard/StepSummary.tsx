@@ -104,11 +104,12 @@ export function StepSummary({ incompleteItems, onJump }: StepSummaryProps) {
     }
   };
 
-  const photoCount = report.stores.reduce(
+  const photoCount = (report.activityType === 'iuran' ? 0 : report.stores.reduce(
     (sum, s) => sum + (s.picPhoto ? 1 : 0) + (s.storefrontPhoto ? 1 : 0),
     0,
-  ) + report.goodsPhotos.length + report.receipt.photos.length
-    + (report.handover.picPhoto ? 1 : 0) + (report.handover.moneyPhoto ? 1 : 0);
+  )) + report.goodsPhotos.length + report.receipt.photos.length
+    + (report.activityType === 'iuran' ? 0 : report.handover.picPhoto ? 1 : 0)
+    + (report.handover.moneyPhoto ? 1 : 0);
 
   return (
     <div className="space-y-6">
@@ -164,7 +165,7 @@ export function StepSummary({ incompleteItems, onJump }: StepSummaryProps) {
           {report.receipt.receiptNumber && (
             <ReceiptRow label="No. Struk" value={report.receipt.receiptNumber} />
           )}
-          {report.stores.map((store, i) => (
+          {report.activityType !== 'iuran' && report.stores.map((store, i) => (
             <div key={store.id}>
               {report.stores.length > 1 && (
                 <p className="text-muted-foreground font-semibold mt-2">Toko {i + 1}</p>
@@ -372,12 +373,13 @@ function PreviewOverlay({
   const diff = report.receipt.receiptTotal - itemTotal;
   const isMatch = diff === 0;
 
-  const storePhotoCount = report.stores.reduce(
+  const storePhotoCount = report.activityType === 'iuran' ? 0 : report.stores.reduce(
     (sum, s) => sum + (s.picPhoto ? 1 : 0) + (s.storefrontPhoto ? 1 : 0),
     0,
   );
   const totalPhotos = storePhotoCount + report.goodsPhotos.length
-    + report.receipt.photos.length + (report.handover.picPhoto ? 1 : 0)
+    + report.receipt.photos.length
+    + (report.activityType === 'iuran' ? 0 : report.handover.picPhoto ? 1 : 0)
     + (report.handover.moneyPhoto ? 1 : 0);
 
   return (
@@ -424,7 +426,7 @@ function PreviewOverlay({
           </div>
 
           {/* Stores */}
-          {report.stores.length > 0 && (
+          {report.activityType !== 'iuran' && report.stores.length > 0 && (
             <div className="space-y-2">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Toko</p>
               {report.stores.map((store, i) => (
@@ -475,10 +477,10 @@ function PreviewOverlay({
             <div className="space-y-2">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Foto ({totalPhotos})</p>
               <div className="grid grid-cols-3 gap-2">
-                {report.stores.filter(s => s.picPhoto?.dataUrl).map((s, i) => (
+                {report.activityType !== 'iuran' && report.stores.filter(s => s.picPhoto?.dataUrl).map((s, i) => (
                   <PreviewThumb key={`pic-${i}`} dataUrl={s.picPhoto!.dataUrl} label="PIC" />
                 ))}
-                {report.stores.filter(s => s.storefrontPhoto?.dataUrl).map((s, i) => (
+                {report.activityType !== 'iuran' && report.stores.filter(s => s.storefrontPhoto?.dataUrl).map((s, i) => (
                   <PreviewThumb key={`store-${i}`} dataUrl={s.storefrontPhoto!.dataUrl} label="Toko" />
                 ))}
                 {report.goodsPhotos.map((p, i) => (
@@ -487,7 +489,7 @@ function PreviewOverlay({
                 {report.receipt.photos.map((p, i) => (
                   <PreviewThumb key={`receipt-${i}`} dataUrl={p.dataUrl} label="Struk" />
                 ))}
-                {report.handover.picPhoto?.dataUrl && (
+                {report.activityType !== 'iuran' && report.handover.picPhoto?.dataUrl && (
                   <PreviewThumb dataUrl={report.handover.picPhoto.dataUrl} label="PIC Penyerah" />
                 )}
                 {report.handover.moneyPhoto?.dataUrl && (

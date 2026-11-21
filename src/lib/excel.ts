@@ -74,13 +74,13 @@ export async function exportExcel(report: ReportData): Promise<void> {
     headerRows += 1;
   }
   let storeStart = headerRows + 1;
-  if (report.stores.length === 1) {
+  if (report.activityType !== 'iuran' && report.stores.length === 1) {
     const store = report.stores[0];
     sheet.insertRow(storeStart, ['PIC', store.picName || '-', '', '']);
     sheet.insertRow(storeStart + 1, ['Toko', store.storeName || '-', '', '']);
     sheet.insertRow(storeStart + 2, ['Alamat', store.address || '-', '', '']);
     headerRows = storeStart + 2;
-  } else if (report.stores.length > 1) {
+  } else if (report.activityType !== 'iuran' && report.stores.length > 1) {
     report.stores.forEach((store, i) => {
       const base = storeStart + i * 4;
       sheet.insertRow(base, [`Toko ${i + 1}`, '', '', '']);
@@ -175,7 +175,7 @@ export async function exportExcel(report: ReportData): Promise<void> {
   for (const photo of report.receipt.photos) {
     addPhotoRow(photoSheet, rowIdx++, 'Foto Struk', photo);
   }
-  if (report.handover.picPhoto) {
+  if (report.activityType !== 'iuran' && report.handover.picPhoto) {
     addPhotoRow(photoSheet, rowIdx++, 'Foto PIC Penyerah', report.handover.picPhoto);
   }
   if (report.handover.moneyPhoto) {
